@@ -51,6 +51,13 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      - name: Add custom packages
+        working-directory: openwrt
+        run: |
+          # argon 主题
+          git clone --depth=1 https://github.com/jerrykuku/luci-theme-argon \
+            package/luci-theme-argon
+
       - name: Load config fragment
         run: |
           cp config/${{ github.event.inputs.target }}.config openwrt/.config
