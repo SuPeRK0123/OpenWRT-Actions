@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - x86_64
+          - mt7981
       version:
         description: 'OpenWrt version tag (e.g. v24.10.4)'
         required: true
@@ -78,7 +79,7 @@ jobs:
           mkdir -p artifacts
           find openwrt/bin/targets -type f \( \
             -name "*.img.gz" \
-            -o -name "*.vmdk" \
+            -o -name "*.bin" \
             -o -name "sha256sums" \
           \) -exec cp {} artifacts/ \;
           ls -lh artifacts/
