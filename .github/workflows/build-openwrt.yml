@@ -14,7 +14,15 @@ on:
       version:
         description: 'OpenWrt version tag (e.g. v24.10.4)'
         required: true
-        default: 'v24.10.4'
+        default: 'v25.12.2'
+      lan_ip:
+        description: 'LAN IP address'
+        required: true
+        default: '192.168.1.1'
+      rootfs_size:
+        description: 'Root filesystem size in MB (x86_64 only)'
+        required: true
+        default: '512'
 
 jobs:
   build:
@@ -55,14 +63,36 @@ jobs:
       - name: Add custom packages
         working-directory: openwrt
         run: |
-          # argon 主题
           git clone --depth=1 https://github.com/jerrykuku/luci-theme-argon \
             package/luci-theme-argon
+
+      - name: Restore toolchain cache
+        id: cache-toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            openwrt/staging_dir/toolchain-*
+            openwrt/staging_dir/host
+            openwrt/build_dir/host
+            openwrt/build_dir/toolchain-*
+          key: toolchain-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}
 
       - name: Load config fragment
         run: |
           cp config/${{ github.event.inputs.target }}.config openwrt/.config
+          # 追加参数化配置
+          echo "CONFIG_TARGET_ROOTFS_PARTSIZE=${{ github.event.inputs.rootfs_size }}" >> openwrt/.config
           cd openwrt && make defconfig
+
+      - name: Apply custom settings
+        run: |
+          mkdir -p openwrt/files/etc/uci-defaults
+          cat > openwrt/files/etc/uci-defaults/99-custom << 'EOF'
+          #!/bin/sh
+          uci set network.lan.ipaddr='${{ github.event.inputs.lan_ip }}'
+          uci commit network
+          exit 0
+          EOF
 
       - name: Download package sources
         working-directory: openwrt
@@ -73,6 +103,17 @@ jobs:
         working-directory: openwrt
         run: |
           make -j$(nproc) || make -j1 V=s 2>&1 | tail -n 50
+
+      - name: Save toolchain cache
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            openwrt/staging_dir/toolchain-*
+            openwrt/staging_dir/host
+            openwrt/build_dir/host
+            openwrt/build_dir/toolchain-*
+          key: toolchain-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}
 
       - name: Collect firmware files
         run: |
