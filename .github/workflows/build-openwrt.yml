@@ -44,6 +44,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Get build time
+        id: time
+        run: echo "value=$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M')" >> $GITHUB_OUTPUT
+
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
@@ -170,8 +174,12 @@ jobs:
           body: |
             ## OpenWrt ${{ github.event.inputs.version }} - ${{ github.event.inputs.target }}
 
-            **编译时间**: ${{ github.run_id }}
-            **包含软件**: sing-box / ddns-scripts / ttyd / luci-theme-argon
+            **编译时间**: ${{ steps.time.outputs.value }} (UTC+8)
+            **路由模式**: ${{ github.event.inputs.mode == 'bypass' && '旁路由' || '主路由' }}
+            **LAN IP**: ${{ github.event.inputs.lan_ip }}
+            ${{ github.event.inputs.mode == 'bypass' && format('**网关**: {0}', github.event.inputs.gateway) || '' }}
+            **Root 分区**: ${{ github.event.inputs.rootfs_size }} MB（仅 x86_64）
+            **包含软件**: sing-box / ddns-scripts-cloudflare / ttyd / luci-theme-argon
 
             ### 文件说明 (x86_64)
             - `*-ext4-combined-efi.img.gz` → 推荐，UEFI 启动 + ext4
