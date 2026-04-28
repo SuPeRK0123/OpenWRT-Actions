@@ -169,8 +169,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: openwrt-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}
-          name: "OpenWrt ${{ github.event.inputs.version }} (${{ github.event.inputs.target }})"
+          tag_name: openwrt-${{ github.event.inputs.target }}-${{ github.event.inputs.mode }}-${{ github.event.inputs.version }}
+          name: "OpenWrt ${{ github.event.inputs.version }} (${{ github.event.inputs.target }} / ${{ github.event.inputs.mode }})"
           body: |
             ## OpenWrt ${{ github.event.inputs.version }} - ${{ github.event.inputs.target }}
 
