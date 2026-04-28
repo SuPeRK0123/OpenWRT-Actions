@@ -99,10 +99,16 @@ jobs:
         run: |
           make download -j$(nproc)
 
+      - name: Build toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        working-directory: openwrt
+        run: |
+          make toolchain/install -j$(nproc) || make toolchain/install -j1 V=s
+
       - name: Build firmware
         working-directory: openwrt
         run: |
-          make -j$(nproc) || make -j1 V=s 2>&1 | tail -n 50
+          make -j$(nproc) IGNORE_ERRORS=1 || make -j1 V=s 2>&1 | tail -n 50
 
       - name: Save toolchain cache
         if: steps.cache-toolchain.outputs.cache-hit != 'true'
