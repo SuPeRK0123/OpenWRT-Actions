@@ -19,6 +19,18 @@ on:
         description: 'LAN IP address'
         required: true
         default: '192.168.1.1'
+      mode:
+        description: 'Router mode'
+        required: true
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - bypass
+      gateway:
+        description: 'Gateway IP (bypass mode only, e.g. 192.168.1.1)'
+        required: false
+        default: '192.168.1.1'
       rootfs_size:
         description: 'Root filesystem size in MB (x86_64 only)'
         required: true
@@ -87,12 +99,24 @@ jobs:
       - name: Apply custom settings
         run: |
           mkdir -p openwrt/files/etc/uci-defaults
-          cat > openwrt/files/etc/uci-defaults/99-custom << 'EOF'
+          if [ "${{ github.event.inputs.mode }}" = "bypass" ]; then
+            cat > openwrt/files/etc/uci-defaults/99-custom << 'EOF'
+          #!/bin/sh
+          uci set network.lan.ipaddr='${{ github.event.inputs.lan_ip }}'
+          uci set network.lan.gateway='${{ github.event.inputs.gateway }}'
+          uci set network.lan.dns='${{ github.event.inputs.gateway }}'
+          uci set network.lan.netmask='255.255.255.0'
+          uci commit network
+          exit 0
+          EOF
+          else
+            cat > openwrt/files/etc/uci-defaults/99-custom << 'EOF'
           #!/bin/sh
           uci set network.lan.ipaddr='${{ github.event.inputs.lan_ip }}'
           uci commit network
           exit 0
           EOF
+          fi
 
       - name: Download package sources
         working-directory: openwrt
@@ -137,3 +161,25 @@ jobs:
           name: openwrt-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}
           path: artifacts/
           retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: openwrt-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}
+          name: "OpenWrt ${{ github.event.inputs.version }} (${{ github.event.inputs.target }})"
+          body: |
+            ## OpenWrt ${{ github.event.inputs.version }} - ${{ github.event.inputs.target }}
+
+            **编译时间**: ${{ github.run_id }}
+            **包含软件**: sing-box / ddns-scripts / ttyd / luci-theme-argon
+
+            ### 文件说明 (x86_64)
+            - `*-ext4-combined-efi.img.gz` → 推荐，UEFI 启动 + ext4
+            - `*-squashfs-combined-efi.img.gz` → UEFI 启动 + squashfs（支持恢复出厂）
+
+            ### 文件说明 (mt7981)
+            - `*-squashfs-sysupgrade.bin` → 从原厂或 OpenWrt 升级用
+          files: artifacts/*
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
