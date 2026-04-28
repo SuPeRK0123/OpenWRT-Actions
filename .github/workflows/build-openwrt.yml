@@ -103,24 +103,38 @@ jobs:
       - name: Apply custom settings
         run: |
           mkdir -p openwrt/files/etc/uci-defaults
-          if [ "${{ github.event.inputs.mode }}" = "bypass" ]; then
-            cat > openwrt/files/etc/uci-defaults/99-custom << 'EOF'
+          cat > openwrt/files/etc/uci-defaults/99-custom << 'SCRIPT'
           #!/bin/sh
+          # ── 系统基础 ──────────────────────────────────
+          uci set system.@system[0].hostname='OpenWrt'
+          uci set system.@system[0].timezone='CST-8'
+          uci set system.@system[0].zonename='Asia/Shanghai'
+          # NTP 服务器
+          uci del system.ntp.server
+          uci add_list system.ntp.server='ntp.aliyun.com'
+          uci add_list system.ntp.server='ntp.tencent.com'
+          uci add_list system.ntp.server='time.xtracloud.net'
+          uci add_list system.ntp.server='time.apple.com'
+          uci commit system
+          # ── 网络 ──────────────────────────────────────
           uci set network.lan.ipaddr='${{ github.event.inputs.lan_ip }}'
-          uci set network.lan.gateway='${{ github.event.inputs.gateway }}'
-          uci set network.lan.dns='${{ github.event.inputs.gateway }}'
-          uci set network.lan.netmask='255.255.255.0'
-          uci commit network
-          exit 0
-          EOF
-          else
-            cat > openwrt/files/etc/uci-defaults/99-custom << 'EOF'
-          #!/bin/sh
-          uci set network.lan.ipaddr='${{ github.event.inputs.lan_ip }}'
-          uci commit network
-          exit 0
-          EOF
+          # 旁路由模式额外配置
+          if [ '${{ github.event.inputs.mode }}' = 'bypass' ]; then
+            uci set network.lan.gateway='${{ github.event.inputs.gateway }}'
+            uci set network.lan.dns='${{ github.event.inputs.gateway }}'
+            uci set network.lan.netmask='255.255.255.0'
           fi
+          uci commit network
+          # ── LuCI ──────────────────────────────────────
+          # 设置 argon 为默认主题
+          uci set luci.main.mediaurlbase='/luci-static/argon'
+          uci commit luci
+          # ── 服务开机状态 ───────────────────────────────
+          # ddns 默认不自启，需要时手动开启
+          /etc/init.d/ddns disable
+          exit 0
+          SCRIPT
+          chmod +x openwrt/files/etc/uci-defaults/99-custom
 
       - name: Download package sources
         working-directory: openwrt
