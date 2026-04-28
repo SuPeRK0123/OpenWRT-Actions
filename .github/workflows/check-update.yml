@@ -54,7 +54,11 @@ jobs:
         run: |
           gh workflow run build-openwrt.yml \
             -f target=x86_64 \
-            -f version=${{ steps.check.outputs.new_version }}
+            -f version=${{ steps.check.outputs.new_version }} \
+            -f lan_ip=192.168.1.1 \
+            -f mode=main \
+            -f gateway=192.168.1.1 \
+            -f rootfs_size=512
 
       - name: Trigger mt7981 build
         if: steps.check.outputs.needed == 'true'
@@ -63,4 +67,8 @@ jobs:
         run: |
           gh workflow run build-openwrt.yml \
             -f target=mt7981 \
-            -f version=${{ steps.check.outputs.new_version }}
+            -f version=${{ steps.check.outputs.new_version }} \
+            -f lan_ip=192.168.1.1 \
+            -f mode=main \
+            -f gateway=192.168.1.1 \
+            -f rootfs_size=512
