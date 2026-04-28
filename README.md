@@ -60,23 +60,6 @@
 |---|---|
 | `*-squashfs-sysupgrade.bin` | 刷机 / 升级，通过 LuCI 或 sysupgrade 命令使用 |
 
-## 刷机后配置 sing-box
-
-固件内已预配置 sing-box 官方 apk 源，联网后执行：
-
-```bash
-apk update
-apk add sing-box
-/etc/init.d/sing-box enable
-/etc/init.d/sing-box start
-```
-
-后续升级：
-
-```bash
-apk upgrade sing-box
-```
-
 ## 自定义软件包
 
 ### 在哪里查找官方包
