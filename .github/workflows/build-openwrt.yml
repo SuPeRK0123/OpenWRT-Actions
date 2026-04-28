@@ -132,6 +132,11 @@ jobs:
           # ── 服务开机状态 ───────────────────────────────
           # ddns 默认不自启，需要时手动开启
           /etc/init.d/ddns disable
+          # ── sing-box 官方 apk 源 ──────────────────────
+          # 添加官方源后 apk update && apk add sing-box 即可安装最新版
+          mkdir -p /etc/apk
+          echo "https://sing-box.sagernet.org/packages/openwrt" \
+            >> /etc/apk/repositories.d/sing-box.list
           exit 0
           SCRIPT
           chmod +x openwrt/files/etc/uci-defaults/99-custom
