@@ -12,7 +12,7 @@ on:
           - x86_64
           - mt7981
       version:
-        description: 'OpenWrt version tag (e.g. v24.10.4)'
+        description: 'OpenWrt version tag (e.g. v25.12.2)'
         required: true
         default: 'v25.12.2'
       lan_ip:
@@ -39,6 +39,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -91,13 +93,14 @@ jobs:
             openwrt/staging_dir/host
             openwrt/build_dir/host
             openwrt/build_dir/toolchain-*
-          key: toolchain-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}
+          key: toolchain-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}-${{ hashFiles('config/*.config') }}
 
       - name: Load config fragment
         run: |
           cat config/common.config config/${{ github.event.inputs.target }}.config > openwrt/.config
-          # 追加参数化配置
-          echo "CONFIG_TARGET_ROOTFS_PARTSIZE=${{ github.event.inputs.rootfs_size }}" >> openwrt/.config
+          if [ "${{ github.event.inputs.target }}" = "x86_64" ]; then
+            echo "CONFIG_TARGET_ROOTFS_PARTSIZE=${{ github.event.inputs.rootfs_size }}" >> openwrt/.config
+          fi
           cd openwrt && make defconfig
 
       - name: Apply custom settings
@@ -143,7 +146,7 @@ jobs:
       - name: Download package sources
         working-directory: openwrt
         run: |
-          make download -j$(nproc)
+          make download -j$(nproc) || make download -j1 V=s
 
       - name: Build toolchain
         if: steps.cache-toolchain.outputs.cache-hit != 'true'
@@ -154,7 +157,7 @@ jobs:
       - name: Build firmware
         working-directory: openwrt
         run: |
-          make -j$(nproc) IGNORE_ERRORS=1 || make -j1 V=s 2>&1 | tail -n 50
+          make -j$(nproc) || make -j1 V=s
 
       - name: Save toolchain cache
         if: steps.cache-toolchain.outputs.cache-hit != 'true'
@@ -165,7 +168,7 @@ jobs:
             openwrt/staging_dir/host
             openwrt/build_dir/host
             openwrt/build_dir/toolchain-*
-          key: toolchain-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}
+          key: toolchain-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}-${{ hashFiles('config/*.config') }}
 
       - name: Collect firmware files
         run: |
