@@ -95,7 +95,7 @@ jobs:
 
       - name: Load config fragment
         run: |
-          cp config/${{ github.event.inputs.target }}.config openwrt/.config
+          cat config/common.config config/${{ github.event.inputs.target }}.config > openwrt/.config
           # 追加参数化配置
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=${{ github.event.inputs.rootfs_size }}" >> openwrt/.config
           cd openwrt && make defconfig
@@ -123,8 +123,13 @@ jobs:
             uci set network.lan.gateway='${{ github.event.inputs.gateway }}'
             uci set network.lan.dns='${{ github.event.inputs.gateway }}'
             uci set network.lan.netmask='255.255.255.0'
+            uci commit network
+            # 旁路由不应运行 DHCP 服务，否则会与主路由冲突
+            uci set dhcp.lan.ignore='1'
+            uci commit dhcp
+          else
+            uci commit network
           fi
-          uci commit network
           # ── LuCI ──────────────────────────────────────
           # 设置 argon 为默认主题
           uci set luci.main.mediaurlbase='/luci-static/argon'
