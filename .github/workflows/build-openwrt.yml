@@ -198,7 +198,6 @@ jobs:
             **LAN IP**: ${{ github.event.inputs.lan_ip }}
             ${{ github.event.inputs.mode == 'bypass' && format('**网关**: {0}', github.event.inputs.gateway) || '' }}
             **Root 分区**: ${{ github.event.inputs.rootfs_size }} MB（仅 x86_64）
-            **包含软件**: sing-box / ddns-scripts-cloudflare / ttyd / luci-theme-argon
 
             ### 文件说明 (x86_64)
             - `*-ext4-combined-efi.img.gz` → 推荐，UEFI 启动 + ext4
