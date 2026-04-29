@@ -42,7 +42,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Get build time
         id: time
@@ -179,14 +179,14 @@ jobs:
           ls -lh artifacts/
 
       - name: Upload firmware
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: openwrt-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}
           path: artifacts/
           retention-days: 30
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: openwrt-${{ github.event.inputs.target }}-${{ github.event.inputs.mode }}-${{ github.event.inputs.version }}
           name: "OpenWrt ${{ github.event.inputs.version }} (${{ github.event.inputs.target }} / ${{ github.event.inputs.mode }})"
