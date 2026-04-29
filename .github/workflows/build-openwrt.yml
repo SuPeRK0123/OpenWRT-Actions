@@ -114,7 +114,6 @@ jobs:
           uci add_list system.ntp.server='ntp.aliyun.com'
           uci add_list system.ntp.server='ntp.tencent.com'
           uci add_list system.ntp.server='time.xtracloud.net'
-          uci add_list system.ntp.server='time.apple.com'
           uci commit system
           # ── 网络 ──────────────────────────────────────
           uci set network.lan.ipaddr='${{ github.event.inputs.lan_ip }}'
