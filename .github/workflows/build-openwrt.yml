@@ -179,7 +179,7 @@ jobs:
           ls -lh artifacts/
 
       - name: Upload firmware
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: openwrt-${{ github.event.inputs.target }}-${{ github.event.inputs.version }}
           path: artifacts/
