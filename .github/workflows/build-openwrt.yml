@@ -133,8 +133,8 @@ jobs:
             uci commit network
           fi
           # ── LuCI ──────────────────────────────────────
-          # 设置 argon 为默认主题
-          uci set luci.main.mediaurlbase='/luci-static/argon'
+          # 设置默认主题
+          uci set luci.main.mediaurlbase='/luci-static/aurora'
           uci commit luci
           # ── 服务开机状态 ───────────────────────────────
           # ddns 默认不自启，需要时手动开启
