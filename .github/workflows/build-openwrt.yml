@@ -81,8 +81,8 @@ jobs:
       - name: Add custom packages
         working-directory: openwrt
         run: |
-          git clone --depth=1 https://github.com/jerrykuku/luci-theme-argon \
-            package/luci-theme-argon
+          git clone --depth=1 https://github.com/eamonxg/luci-theme-aurora \
+            package/luci-theme-aurora
 
       - name: Restore toolchain cache
         id: cache-toolchain
