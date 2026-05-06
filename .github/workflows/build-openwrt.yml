@@ -83,6 +83,8 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/eamonxg/luci-theme-aurora \
             package/luci-theme-aurora
+          git clone --depth=1 https://github.com/eamonxg/luci-app-aurora-config \
+            package/luci-app-aurora-config
 
       - name: Restore toolchain cache
         id: cache-toolchain
