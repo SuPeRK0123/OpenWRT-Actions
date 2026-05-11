@@ -12,9 +12,9 @@ on:
           - x86_64
           - mt7981
       version:
-        description: 'OpenWrt version tag (e.g. v25.12.2)'
+        description: 'OpenWrt version tag (e.g. v25.12.3)'
         required: true
-        default: 'v25.12.2'
+        default: 'v25.12.3'
       lan_ip:
         description: 'LAN IP address'
         required: true
