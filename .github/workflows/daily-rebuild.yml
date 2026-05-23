@@ -5,14 +5,14 @@ name: Daily Rebuild (Latest Packages)
 
 on:
   schedule:
-    - cron: '0 11 * * *'
+    - cron: '0 2 * * *'   # UTC 02:00 = 北京时间 10:00
   workflow_dispatch:        # 支持手动触发，方便测试
 
 jobs:
   replay-last-manual-build:
     runs-on: ubuntu-latest
     permissions:
-      actions: write        # 需要权限来触发其他 workflow
+      actions: write
 
     steps:
       - name: Read last manual build inputs
@@ -20,28 +20,49 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 拉取最近 20 条 workflow_dispatch 记录，过滤掉 bot 自动触发的
-          # 只保留真人（你自己）手动触发的那一条
-          INPUTS=$(gh api \
-            "repos/${{ github.repository }}/actions/workflows/build-openwrt.yml/runs?event=workflow_dispatch&per_page=20" \
-            --jq '[.workflow_runs[] | select(.actor.login != "github-actions[bot]")] | first | .inputs')
+          # ── 第一步：列出最近 20 条手动触发记录 ────────────────────────────
+          echo "=== [DEBUG] 拉取 workflow runs 列表 ==="
+          RUNS_JSON=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/build-openwrt.yml/runs?event=workflow_dispatch&per_page=20")
 
-          if [ -z "$INPUTS" ] || [ "$INPUTS" = "null" ]; then
+          echo "=== [DEBUG] 所有 runs 的 actor 列表 ==="
+          echo "$RUNS_JSON" | jq '[.workflow_runs[] | {id, actor: .actor.login, created_at}]'
+
+          # ── 第二步：找到第一条非 bot 触发的 run，取其 id ─────────────────
+          RUN_ID=$(echo "$RUNS_JSON" | \
+            jq '[.workflow_runs[] | select(.actor.login != "github-actions[bot]")] | first | .id')
+
+          echo "=== [DEBUG] 选中的 run_id: $RUN_ID ==="
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
             echo "::error::未找到历史手动编译记录，请先手动触发一次 build-openwrt.yml 后再启用此 workflow"
             exit 1
           fi
 
+          # ── 第三步：单独请求该 run 的详情，inputs 只在详情接口返回 ────────
+          echo "=== [DEBUG] 拉取 run 详情 (id=$RUN_ID) ==="
+          RUN_DETAIL=$(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID")
+
+          echo "=== [DEBUG] run 详情中的 inputs 字段 ==="
+          INPUTS=$(echo "$RUN_DETAIL" | jq '.inputs')
+          echo "$INPUTS"
+
+          if [ -z "$INPUTS" ] || [ "$INPUTS" = "null" ]; then
+            echo "::error::run 详情中 inputs 为空，该次编译可能未携带参数"
+            exit 1
+          fi
+
+          # ── 第四步：写入 outputs ──────────────────────────────────────────
           echo "✅ 读取到上次手动编译参数："
           echo "$INPUTS" | jq .
 
-          # 写入 outputs，供后续 step 使用
-          echo "target=$(echo "$INPUTS"      | jq -r '.target')"       >> $GITHUB_OUTPUT
-          echo "version=$(echo "$INPUTS"     | jq -r '.version')"      >> $GITHUB_OUTPUT
-          echo "ip_mode=$(echo "$INPUTS"     | jq -r '.ip_mode // "static"')" >> $GITHUB_OUTPUT
-          echo "lan_ip=$(echo "$INPUTS"      | jq -r '.lan_ip')"       >> $GITHUB_OUTPUT
-          echo "mode=$(echo "$INPUTS"        | jq -r '.mode')"         >> $GITHUB_OUTPUT
-          echo "gateway=$(echo "$INPUTS"     | jq -r '.gateway')"      >> $GITHUB_OUTPUT
-          echo "rootfs_size=$(echo "$INPUTS" | jq -r '.rootfs_size')"  >> $GITHUB_OUTPUT
+          echo "target=$(echo "$INPUTS"      | jq -r '.target')"                   >> $GITHUB_OUTPUT
+          echo "version=$(echo "$INPUTS"     | jq -r '.version')"                  >> $GITHUB_OUTPUT
+          echo "ip_mode=$(echo "$INPUTS"     | jq -r '.ip_mode // "static"')"      >> $GITHUB_OUTPUT
+          echo "lan_ip=$(echo "$INPUTS"      | jq -r '.lan_ip')"                   >> $GITHUB_OUTPUT
+          echo "mode=$(echo "$INPUTS"        | jq -r '.mode')"                     >> $GITHUB_OUTPUT
+          echo "gateway=$(echo "$INPUTS"     | jq -r '.gateway')"                  >> $GITHUB_OUTPUT
+          echo "rootfs_size=$(echo "$INPUTS" | jq -r '.rootfs_size')"              >> $GITHUB_OUTPUT
 
       - name: Trigger build with same inputs
         env:
