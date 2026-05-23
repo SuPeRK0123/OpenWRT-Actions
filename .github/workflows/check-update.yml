@@ -2,7 +2,7 @@ name: Check for OpenWrt Updates
 
 on:
   schedule:
-    - cron: '0 8 * * *'
+    - cron: '0 10 * * *'
   workflow_dispatch:        # 也支持手动触发，方便测试
 
 jobs:
