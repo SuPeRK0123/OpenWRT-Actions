@@ -2,7 +2,7 @@
   "target":      "x86_64",
   "version":     "v25.12.4",
   "ip_mode":     "dhcp",
-  "lan_ip":      "192.168.1.1",
+  "lan_ip":      "192.168.5.200",
   "mode":        "bypass",
   "gateway":     "192.168.5.1",
   "rootfs_size": "512"
