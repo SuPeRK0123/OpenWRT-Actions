@@ -55,6 +55,7 @@ jobs:
           gh workflow run build-openwrt.yml \
             -f target=x86_64 \
             -f version=${{ steps.check.outputs.new_version }} \
+            -f ip_mode=static \
             -f lan_ip=192.168.1.1 \
             -f mode=main \
             -f gateway=192.168.1.1 \
@@ -68,6 +69,7 @@ jobs:
           gh workflow run build-openwrt.yml \
             -f target=mt7981 \
             -f version=${{ steps.check.outputs.new_version }} \
+            -f ip_mode=static \
             -f lan_ip=192.168.1.1 \
             -f mode=main \
             -f gateway=192.168.1.1 \
