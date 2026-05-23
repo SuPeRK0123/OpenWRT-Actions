@@ -12,12 +12,20 @@ on:
           - x86_64
           - mt7981
       version:
-        description: 'OpenWrt version tag (e.g. v25.12.3)'
+        description: 'OpenWrt version tag (e.g. v25.12.4)'
         required: true
-        default: 'v25.12.3'
+        default: 'v25.12.4'
+      ip_mode:
+        description: 'LAN IP 分配方式'
+        required: true
+        default: 'static'
+        type: choice
+        options:
+          - static
+          - dhcp
       lan_ip:
-        description: 'LAN IP address'
-        required: true
+        description: 'LAN 静态 IP（仅 static 模式生效）'
+        required: false
         default: '192.168.1.1'
       mode:
         description: 'Router mode'
@@ -121,12 +129,17 @@ jobs:
           uci add_list system.ntp.server='time.xtracloud.net'
           uci commit system
           # ── 网络 ──────────────────────────────────────
-          uci set network.lan.ipaddr='${{ github.event.inputs.lan_ip }}'
+          if [ '${{ github.event.inputs.ip_mode }}' = 'static' ]; then
+            uci set network.lan.proto='static'
+            uci set network.lan.ipaddr='${{ github.event.inputs.lan_ip }}'
+            uci set network.lan.netmask='255.255.255.0'
+          else
+            uci set network.lan.proto='dhcp'
+          fi
           # 旁路由模式额外配置
           if [ '${{ github.event.inputs.mode }}' = 'bypass' ]; then
             uci set network.lan.gateway='${{ github.event.inputs.gateway }}'
             uci set network.lan.dns='${{ github.event.inputs.gateway }}'
-            uci set network.lan.netmask='255.255.255.0'
             uci commit network
             # 旁路由不应运行 DHCP 服务，否则会与主路由冲突
             uci set dhcp.lan.ignore='1'
@@ -199,7 +212,8 @@ jobs:
 
             **编译时间**: ${{ steps.time.outputs.value }} (UTC+8)
             **路由模式**: ${{ github.event.inputs.mode == 'bypass' && '旁路由' || '主路由' }}
-            **LAN IP**: ${{ github.event.inputs.lan_ip }}
+            **IP 模式**: ${{ github.event.inputs.ip_mode == 'static' && '静态 IP' || 'DHCP' }}
+            ${{ github.event.inputs.ip_mode == 'static' && format('**LAN IP**: {0}', github.event.inputs.lan_ip) || '' }}
             ${{ github.event.inputs.mode == 'bypass' && format('**网关**: {0}', github.event.inputs.gateway) || '' }}
             **Root 分区**: ${{ github.event.inputs.rootfs_size }} MB（仅 x86_64）
 
