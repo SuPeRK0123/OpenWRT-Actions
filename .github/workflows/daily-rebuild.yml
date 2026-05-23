@@ -1,0 +1,67 @@
+name: Daily Rebuild (Latest Packages)
+
+# 每天定时重建，确保软件包保持最新
+# 参数来源：自动读取你上一次手动触发 build-openwrt.yml 的编译配置
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # UTC 02:00 = 北京时间 10:00
+  workflow_dispatch:        # 支持手动触发，方便测试
+
+jobs:
+  replay-last-manual-build:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write        # 需要权限来触发其他 workflow
+
+    steps:
+      - name: Read last manual build inputs
+        id: last
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 拉取最近 20 条 workflow_dispatch 记录，过滤掉 bot 自动触发的
+          # 只保留真人（你自己）手动触发的那一条
+          INPUTS=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/build-openwrt.yml/runs?event=workflow_dispatch&per_page=20" \
+            --jq '[.workflow_runs[] | select(.actor.login != "github-actions[bot]")] | first | .inputs')
+
+          if [ -z "$INPUTS" ] || [ "$INPUTS" = "null" ]; then
+            echo "::error::未找到历史手动编译记录，请先手动触发一次 build-openwrt.yml 后再启用此 workflow"
+            exit 1
+          fi
+
+          echo "✅ 读取到上次手动编译参数："
+          echo "$INPUTS" | jq .
+
+          # 写入 outputs，供后续 step 使用
+          echo "target=$(echo "$INPUTS"      | jq -r '.target')"       >> $GITHUB_OUTPUT
+          echo "version=$(echo "$INPUTS"     | jq -r '.version')"      >> $GITHUB_OUTPUT
+          echo "ip_mode=$(echo "$INPUTS"     | jq -r '.ip_mode // "static"')" >> $GITHUB_OUTPUT
+          echo "lan_ip=$(echo "$INPUTS"      | jq -r '.lan_ip')"       >> $GITHUB_OUTPUT
+          echo "mode=$(echo "$INPUTS"        | jq -r '.mode')"         >> $GITHUB_OUTPUT
+          echo "gateway=$(echo "$INPUTS"     | jq -r '.gateway')"      >> $GITHUB_OUTPUT
+          echo "rootfs_size=$(echo "$INPUTS" | jq -r '.rootfs_size')"  >> $GITHUB_OUTPUT
+
+      - name: Trigger build with same inputs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run build-openwrt.yml \
+            -f target="${{ steps.last.outputs.target }}" \
+            -f version="${{ steps.last.outputs.version }}" \
+            -f ip_mode="${{ steps.last.outputs.ip_mode }}" \
+            -f lan_ip="${{ steps.last.outputs.lan_ip }}" \
+            -f mode="${{ steps.last.outputs.mode }}" \
+            -f gateway="${{ steps.last.outputs.gateway }}" \
+            -f rootfs_size="${{ steps.last.outputs.rootfs_size }}"
+
+          echo ""
+          echo "🚀 已触发每日重建，参数如下："
+          echo "  target      : ${{ steps.last.outputs.target }}"
+          echo "  version     : ${{ steps.last.outputs.version }}"
+          echo "  ip_mode     : ${{ steps.last.outputs.ip_mode }}"
+          echo "  lan_ip      : ${{ steps.last.outputs.lan_ip }}"
+          echo "  mode        : ${{ steps.last.outputs.mode }}"
+          echo "  gateway     : ${{ steps.last.outputs.gateway }}"
+          echo "  rootfs_size : ${{ steps.last.outputs.rootfs_size }} MB"
