@@ -54,6 +54,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # 仅人工触发时保存本次参数，供 daily-rebuild.yml 读取复用
+      # bot 触发（check-update、daily-rebuild）跳过此步，避免覆盖你的配置
+      - name: Save inputs for daily rebuild
+        if: github.actor != 'github-actions[bot]'
+        run: |
+          cat > last-build-inputs.json << JSON
+          {
+            "target":      "${{ github.event.inputs.target }}",
+            "version":     "${{ github.event.inputs.version }}",
+            "ip_mode":     "${{ github.event.inputs.ip_mode }}",
+            "lan_ip":      "${{ github.event.inputs.lan_ip }}",
+            "mode":        "${{ github.event.inputs.mode }}",
+            "gateway":     "${{ github.event.inputs.gateway }}",
+            "rootfs_size": "${{ github.event.inputs.rootfs_size }}"
+          }
+          JSON
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add last-build-inputs.json
+          # 若文件无变化则跳过 commit，避免空提交报错
+          git diff --staged --quiet || git commit -m "chore: save last manual build inputs [skip ci]"
+          git push
+
       - name: Get build time
         id: time
         run: echo "value=$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M')" >> $GITHUB_OUTPUT
@@ -148,11 +171,9 @@ jobs:
             uci commit network
           fi
           # ── LuCI ──────────────────────────────────────
-          # 设置默认主题
           uci set luci.main.mediaurlbase='/luci-static/aurora'
           uci commit luci
           # ── 服务开机状态 ───────────────────────────────
-          # ddns 默认不自启，需要时手动开启
           /etc/init.d/ddns disable
           exit 0
           SCRIPT
@@ -223,6 +244,7 @@ jobs:
 
             ### 文件说明 (mt7981)
             - `*-squashfs-sysupgrade.bin` → 从原厂或 OpenWrt 升级用
+
           files: artifacts/*
           make_latest: true
         env:
