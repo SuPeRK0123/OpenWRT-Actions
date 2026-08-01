@@ -12,9 +12,9 @@ on:
           - x86_64
           - mt7981
       version:
-        description: 'OpenWrt version tag (e.g. v25.12.4)'
+        description: 'OpenWrt version tag (e.g. v25.12.5)'
         required: true
-        default: 'v25.12.4'
+        default: 'v25.12.5'
       ip_mode:
         description: 'LAN IP 分配方式'
         required: true
